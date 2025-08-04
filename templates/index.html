@@ -3,11 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Murf AI</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <title>Murf AI TTS Player</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <h1>Welcome to Murf AI</h1>
-    <script src="/static/script.js"></script>
+<body class="bg-gradient-to-r from-purple-500 to-indigo-600 min-h-screen flex items-center justify-center">
+    <div class="bg-white shadow-lg rounded-2xl p-8 w-full max-w-md text-center">
+        <h1 class="text-2xl font-bold mb-6 text-gray-800">🎤 Murf AI TTS</h1>
+
+        <input type="text" id="ttsText" placeholder="Enter your text here"
+            class="border border-gray-300 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
+
+        <button onclick="generateTTS()"
+            class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg transition w-full">
+            Generate Audio
+        </button>
+
+        <div class="mt-6">
+            <audio id="audioPlayer" controls class="w-full rounded-lg shadow"></audio>
+        </div>
+    </div>
+
+    <script>
+        async function generateTTS() {
+            const text = document.getElementById("ttsText").value;
+            const btn = document.querySelector("button");
+            btn.innerText = "Generating...";
+            btn.disabled = true;
+
+            const response = await fetch("/tts", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    text: text,
+                    voice_id: "en-UK-hazel" 
+                })
+            });
+
+            const data = await response.json();
+            btn.innerText = "Generate Audio";
+            btn.disabled = false;
+
+            if (data.audioFile) {
+                document.getElementById("audioPlayer").src = data.audioFile;
+            } else {
+                alert("Error: " + JSON.stringify(data));
+            }
+        }
+    </script>
 </body>
 </html>
