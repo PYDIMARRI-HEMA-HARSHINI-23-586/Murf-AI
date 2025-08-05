@@ -1,54 +1,146 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Murf AI TTS Player</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Murf AI TTS & Echo Bot</title>
     <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gradient-to-r from-purple-500 to-indigo-600 min-h-screen flex items-center justify-center">
-    <div class="bg-white shadow-lg rounded-2xl p-8 w-full max-w-md text-center">
+  </head>
+  <body
+    class="bg-gradient-to-r from-purple-500 to-indigo-600 min-h-screen flex items-center justify-center"
+  >
+    <div
+      class="bg-white shadow-lg rounded-2xl p-8 w-full max-w-md text-center space-y-10"
+    >
+      <!-- TTS Section -->
+      <div>
         <h1 class="text-2xl font-bold mb-6 text-gray-800">🎤 Murf AI TTS</h1>
 
-        <input type="text" id="ttsText" placeholder="Enter your text here"
-            class="border border-gray-300 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
+        <input
+          type="text"
+          id="ttsText"
+          placeholder="Enter your text here"
+          class="border border-gray-300 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4"
+        />
 
-        <button onclick="generateTTS()"
-            class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg transition w-full">
-            Generate Audio
+        <button
+          onclick="generateTTS()"
+          class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg transition w-full"
+        >
+          Generate Audio
         </button>
 
         <div class="mt-6">
-            <audio id="audioPlayer" controls class="w-full rounded-lg shadow"></audio>
+          <audio
+            id="audioPlayer"
+            controls
+            class="w-full rounded-lg shadow"
+          ></audio>
         </div>
+      </div>
+
+      <!-- Divider -->
+      <div class="border-t border-gray-200"></div>
+
+      <!-- Echo Bot Section -->
+      <div>
+        <h1 class="text-2xl font-bold mb-6 text-gray-800">🎙️ Echo Bot</h1>
+
+        <div class="flex justify-center gap-4 mb-4">
+          <button
+            id="startBtn"
+            class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition"
+          >
+            Start Recording
+          </button>
+          <button
+            id="stopBtn"
+            disabled
+            class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50"
+          >
+            Stop Recording
+          </button>
+        </div>
+
+        <div>
+          <audio
+            id="echoAudio"
+            controls
+            class="w-full rounded-lg shadow"
+          ></audio>
+        </div>
+      </div>
     </div>
 
     <script>
-        async function generateTTS() {
-            const text = document.getElementById("ttsText").value;
-            const btn = document.querySelector("button");
-            btn.innerText = "Generating...";
-            btn.disabled = true;
+      // TTS Function
+      async function generateTTS() {
+        const text = document.getElementById("ttsText").value;
+        const btn = document.querySelector("button");
+        btn.innerText = "Generating...";
+        btn.disabled = true;
 
-            const response = await fetch("/tts", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    text: text,
-                    voice_id: "en-UK-hazel" 
-                })
-            });
+        const response = await fetch("/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: text,
+            voice_id: "en-UK-hazel",
+          }),
+        });
 
-            const data = await response.json();
-            btn.innerText = "Generate Audio";
-            btn.disabled = false;
+        const data = await response.json();
+        btn.innerText = "Generate Audio";
+        btn.disabled = false;
 
-            if (data.audioFile) {
-                document.getElementById("audioPlayer").src = data.audioFile;
-            } else {
-                alert("Error: " + JSON.stringify(data));
-            }
+        if (data.audioFile) {
+          document.getElementById("audioPlayer").src = data.audioFile;
+        } else {
+          alert("Error: " + JSON.stringify(data));
         }
+      }
+
+      // Echo Bot Functionality
+      let mediaRecorder;
+      let audioChunks = [];
+
+      const startBtn = document.getElementById("startBtn");
+      const stopBtn = document.getElementById("stopBtn");
+      const echoAudio = document.getElementById("echoAudio");
+
+      startBtn.addEventListener("click", async () => {
+        audioChunks = [];
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+          mediaRecorder = new MediaRecorder(stream);
+
+          mediaRecorder.ondataavailable = (event) => {
+            audioChunks.push(event.data);
+          };
+
+          mediaRecorder.onstop = () => {
+            const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
+            const audioUrl = URL.createObjectURL(audioBlob);
+            echoAudio.src = audioUrl;
+          };
+
+          mediaRecorder.start();
+          startBtn.disabled = true;
+          stopBtn.disabled = false;
+          console.log("Recording started...");
+        } catch (err) {
+          console.error("Error accessing microphone:", err);
+        }
+      });
+
+      stopBtn.addEventListener("click", () => {
+        mediaRecorder.stop();
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        console.log("Recording stopped.");
+      });
     </script>
-</body>
+  </body>
 </html>
