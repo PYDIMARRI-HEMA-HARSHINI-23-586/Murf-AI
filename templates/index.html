@@ -66,9 +66,12 @@
           <audio
             id="echoAudio"
             controls
-            class="w-full rounded-lg shadow"
+            class="w-full rounded-lg shadow hidden"
           ></audio>
         </div>
+
+        <!-- Upload Status -->
+        <p id="uploadStatus" class="text-sm text-gray-700 mt-2"></p>
       </div>
     </div>
 
@@ -100,13 +103,14 @@
         }
       }
 
-      // Echo Bot Functionality
+      // Echo Bot Functionality (Day-5 Updated)
       let mediaRecorder;
       let audioChunks = [];
 
       const startBtn = document.getElementById("startBtn");
       const stopBtn = document.getElementById("stopBtn");
       const echoAudio = document.getElementById("echoAudio");
+      const uploadStatus = document.getElementById("uploadStatus");
 
       startBtn.addEventListener("click", async () => {
         audioChunks = [];
@@ -120,16 +124,35 @@
             audioChunks.push(event.data);
           };
 
-          mediaRecorder.onstop = () => {
+          mediaRecorder.onstop = async () => {
             const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
             const audioUrl = URL.createObjectURL(audioBlob);
             echoAudio.src = audioUrl;
+            echoAudio.classList.remove("hidden");
+
+            // Upload to server
+            uploadStatus.textContent = "📤 Uploading...";
+            const formData = new FormData();
+            formData.append("file", audioBlob, "recording.wav");
+
+            try {
+              const response = await fetch("/upload-audio", {
+                method: "POST",
+                body: formData,
+              });
+              const result = await response.json();
+              uploadStatus.textContent = `✅ Uploaded! File: ${
+                result.filename
+              } (${Math.round(result.size / 1024)} KB)`;
+            } catch (error) {
+              uploadStatus.textContent = "❌ Upload failed!";
+            }
           };
 
           mediaRecorder.start();
           startBtn.disabled = true;
           stopBtn.disabled = false;
-          console.log("Recording started...");
+          uploadStatus.textContent = "🎤 Recording...";
         } catch (err) {
           console.error("Error accessing microphone:", err);
         }
@@ -139,7 +162,7 @@
         mediaRecorder.stop();
         startBtn.disabled = false;
         stopBtn.disabled = true;
-        console.log("Recording stopped.");
+        uploadStatus.textContent = "⏳ Processing...";
       });
     </script>
   </body>
