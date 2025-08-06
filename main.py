@@ -6,6 +6,8 @@ import requests
 import os
 from dotenv import load_dotenv
 import uvicorn
+from fastapi import File, UploadFile
+
 
 # Load API key
 load_dotenv()
@@ -52,6 +54,28 @@ async def generate_tts(data: dict = Body(...)):
         return JSONResponse(content={"error": "Murf API Error", "details": response.text}, status_code=response.status_code)
     
     return JSONResponse(content=response.json())
+    
+
+UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+@app.post("/upload-audio")
+async def upload_audio(file: UploadFile = File(...)):
+    file_location = os.path.join(UPLOAD_FOLDER, file.filename)
+    
+    # Save file to /uploads folder
+    with open(file_location, "wb") as f:
+        f.write(await file.read())
+    
+    # Return file info
+    file_info = {
+        "filename": file.filename,
+        "content_type": file.content_type,
+        "size": os.path.getsize(file_location)
+    }
+    
+    return file_info
+
 
 if __name__ == "__main__":
     uvicorn.run("main:app", reload=True)

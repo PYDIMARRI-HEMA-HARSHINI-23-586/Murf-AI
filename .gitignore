@@ -1,0 +1,26 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment variables
+.env
+
+# Uploaded audio files
+uploads/
+
+# IDE settings
+.vscode/
+.idea/
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Node (if using npm or frontend packages)
+node_modules/
+
+# Ignore Python virtual environments
+venv/
+.env
+
