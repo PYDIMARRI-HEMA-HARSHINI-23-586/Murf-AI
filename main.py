@@ -7,11 +7,14 @@ import os
 from dotenv import load_dotenv
 import uvicorn
 from fastapi import File, UploadFile
+import assemblyai as aai
 
 
 # Load API key
 load_dotenv()
 MURF_API_KEY = os.getenv("MURF_API_KEY")
+ASSEMBLYAI_API_KEY = os.getenv("ASSEMBLYAI_API_KEY")
+
 
 app = FastAPI()
 
@@ -76,6 +79,23 @@ async def upload_audio(file: UploadFile = File(...)):
     
     return file_info
 
+aai.settings.api_key = ASSEMBLYAI_API_KEY
+
+@app.post("/transcribe/file")
+async def transcribe_audio(file: UploadFile = File(...)):
+    try:
+        # Read audio file as bytes
+        audio_bytes = await file.read()
+
+        # Transcribe with polling to avoid timeout
+        transcriber = aai.Transcriber()
+        transcript = transcriber.transcribe(audio_bytes)  # 👈 THIS FIXES THE TIMEOUT
+
+        return JSONResponse(content={"transcript": transcript.text})
+    
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", reload=True)
+    uvicorn.run("main:app", reload=True) 

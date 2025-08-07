@@ -44,7 +44,7 @@
 
       <!-- Echo Bot Section -->
       <div>
-        <h1 class="text-2xl font-bold mb-6 text-gray-800">🎙️ Echo Bot</h1>
+        <h1 class="text-2xl font-bold mb-6 text-gray-800">🎙 Echo Bot</h1>
 
         <div class="flex justify-center gap-4 mb-4">
           <button
@@ -72,6 +72,15 @@
 
         <!-- Upload Status -->
         <p id="uploadStatus" class="text-sm text-gray-700 mt-2"></p>
+
+        <!-- Transcription Output -->
+        <div
+          id="transcriptBox"
+          class="bg-gray-100 text-gray-800 p-4 rounded-lg mt-4 text-left text-sm hidden"
+        >
+          <strong>📝 Transcript:</strong>
+          <p id="transcriptText" class="mt-1"></p>
+        </div>
       </div>
     </div>
 
@@ -103,7 +112,7 @@
         }
       }
 
-      // Echo Bot Functionality (Day-5 Updated)
+      // Echo Bot + Transcription
       let mediaRecorder;
       let audioChunks = [];
 
@@ -111,6 +120,8 @@
       const stopBtn = document.getElementById("stopBtn");
       const echoAudio = document.getElementById("echoAudio");
       const uploadStatus = document.getElementById("uploadStatus");
+      const transcriptBox = document.getElementById("transcriptBox");
+      const transcriptText = document.getElementById("transcriptText");
 
       startBtn.addEventListener("click", async () => {
         audioChunks = [];
@@ -130,22 +141,49 @@
             echoAudio.src = audioUrl;
             echoAudio.classList.remove("hidden");
 
-            // Upload to server
+            // Upload status
             uploadStatus.textContent = "📤 Uploading...";
+            transcriptBox.classList.add("hidden");
+            transcriptText.innerText = "";
+
             const formData = new FormData();
             formData.append("file", audioBlob, "recording.wav");
 
             try {
-              const response = await fetch("/upload-audio", {
+              // Upload the audio
+              const uploadResponse = await fetch("/upload-audio", {
                 method: "POST",
                 body: formData,
               });
-              const result = await response.json();
+              const uploadResult = await uploadResponse.json();
               uploadStatus.textContent = `✅ Uploaded! File: ${
-                result.filename
-              } (${Math.round(result.size / 1024)} KB)`;
+                uploadResult.filename
+              } (${Math.round(uploadResult.size / 1024)} KB)`;
+
+              // Transcribe the audio
+              uploadStatus.textContent += " | 🧠 Transcribing...";
+              const transcribeResponse = await fetch("/transcribe/file", {
+                method: "POST",
+                body: formData,
+              });
+
+              const transcribeResult = await transcribeResponse.json();
+
+              if (transcribeResponse.ok && transcribeResult.transcript) {
+                transcriptBox.classList.remove("hidden");
+                transcriptText.innerText = transcribeResult.transcript;
+                uploadStatus.textContent += " ✅ Done!";
+              } else {
+                transcriptBox.classList.remove("hidden");
+                transcriptText.innerText =
+                  "❌ Transcription failed: " +
+                  (transcribeResult.error || "Unknown error");
+              }
             } catch (error) {
-              uploadStatus.textContent = "❌ Upload failed!";
+              uploadStatus.textContent = "❌ Upload or transcription failed!";
+              transcriptBox.classList.remove("hidden");
+              transcriptText.innerText = "Check console for details.";
+              console.error(error);
             }
           };
 
